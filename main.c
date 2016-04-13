@@ -10,9 +10,10 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 {
 	int PID;
 	int pipefd[2];
-	int fd;
+	int fd, fd1;
 	int len; //key length
 	char kk[LENGTH+1];
+	char buffer[1024], mbuffer[1024];
 
 	if (pipe(pipefd) < 0)
 	{
@@ -25,8 +26,6 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 		perror("Fork error");
 		exit(0);	
 	}
-
-	//open key in main program!
 
 	if (PID == 0) //generator
 	{
@@ -74,9 +73,62 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 		read(pipefd[0], kk, LENGTH);
 		printf("Key: %s\n\n", kk);
 		close(pipefd[0]);
+		//exit(0);
+	}
+
+	//create another pipe
+
+	if (pipe(pipefd) < 0)
+	{
+		perror("Pipe error");
 		exit(0);
 	}
 	
+	if ((PID = fork()) < 0)
+	{
+		perror("Fork error");
+		exit(0);	
+	}
+
+	if (PID == 0) //text
+	{
+		if (fd = open("stext", O_RDONLY) < 0)
+		{
+			perror("Source text file error");
+			close(fd);
+			_exit(0);
+		}
+		int hh;
+		while ((hh = read(fd, buffer, 1024)) > 0) 
+			write(pipefd[1], buffer, hh);
+		close(pipefd[0]); //close read
+		close(fd);
+		close(pipefd[1]);
+		_exit(0);
+	}
+	else
+	{
+		close(pipefd[1]); //close write
+		if ((fd1 = open("entext", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
+		{
+			perror("Encrypted text file error");
+			remove("key");
+			close(fd);
+			exit(0);
+		}
+		int hh;
+		int t_cnt, k_cnt;
+		while ((hh = read(pipefd[0], mbuffer, 1024)) > 0)
+		{
+			for (t_cnt = 0; t_cnt < hh; t_cnt++)
+				mbuffer[t_cnt] ^= kk[t_cnt%128];
+			write(pipefd[1], buffer, hh);
+		}
+		close(pipefd[0]);
+		close(fd1);
+		exit(0);
+	}
+
 	//waitpid(PID);	
 	return 1;
 }
