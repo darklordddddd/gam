@@ -11,9 +11,9 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 {
 	int PID;
 	int pipefd[2];
-	int fd, fd1;
+	int fd;
 	char kk[LENGTH+1];
-	char tbuffer[BUF_LENGTH], mbuffer[BUF_LENGTH];
+	char mbuffer[BUF_LENGTH];
 
 	if (pipe(pipefd) < 0)
 	{
@@ -92,6 +92,7 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 	
 	if (PID == 0) //text
 	{
+		char tbuffer[BUF_LENGTH];
 		if ((fd = open("stext", O_RDWR)) < 0)
 		{
 			perror("Source text file error");
@@ -102,6 +103,7 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 		close(pipefd[0]); //close read
 		while ((hh = read(fd, tbuffer, BUF_LENGTH)) > 0)
 			write(pipefd[1], tbuffer, hh);
+		printf("Text file has been read.\n");
 		close(fd);
 		close(pipefd[1]);
 		_exit(0);
@@ -109,6 +111,8 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 	else
 	{
 		close(pipefd[1]); //close write
+		remove("entext");
+		int fd1;
 		if ((fd1 = open("entext", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
 		{
 			perror("Encrypted text file error");
@@ -124,6 +128,7 @@ int main(int argc, char* argv[]) //-nkey -l <number>
 				mbuffer[t_cnt] ^= kk[t_cnt%128];
 			write(fd1, mbuffer, hh);
 		}
+		printf("Text has been encrypted.\n");
 		close(pipefd[0]);
 		close(fd1);
 		wait(NULL);
