@@ -6,17 +6,19 @@
 #include <signal.h>
 
 #define MAX_ARG_COUNT 20
+#define ARG_LENGTH 100
+#define PIPE_NAME 1000
+#define BUF_LEN 1000
+#define READ_LEN 1
 
-char arg[MAX_ARG_COUNT][100];
+char arg[MAX_ARG_COUNT][ARG_LENGTH];
 char *argp[MAX_ARG_COUNT];
 
-int GEN_PID; 
-
-void parsim(char *text)
+void parse(char *text)
 {
     char c;
     int arg_count=0;
-    char buf[1000];
+    char buf[BUF_LEN];
     char *cp = buf;
     while (arg_count < MAX_ARG_COUNT){
         c = *(text++);
@@ -40,8 +42,10 @@ int main(int argc, char* argv[])
     int pipe_cat[2];
     int pipe_gen[2];
     
-    char mas_gen[1000];
-    char mas_cat[1000];
+    char mas_gen[PIPE_NAME];
+    char mas_cat[PIPE_NAME];
+	
+	int GEN_PID;
     
     int opt;
     while ((opt = getopt(argc, argv, ":g:c:")) != -1) {
@@ -77,7 +81,7 @@ int main(int argc, char* argv[])
         close(pipe_gen[1]);
         close(pipe_cat[1]);
 
-        parsim(mas_gen);
+        parse(mas_gen);
         execvp(argp[0], argp);
         _exit(0);
     }
@@ -88,18 +92,17 @@ int main(int argc, char* argv[])
         close(pipe_cat[1]);
         close(pipe_gen[1]);
 
-        parsim(mas_cat);
+        parse(mas_cat);
         execvp(argp[0], argp);
         _exit(0);
     }
     
     close(pipe_cat[1]);
 
-    char buf[1]; char b[1];
+    char buf[READ_LEN]; char b[READ_LEN];
     char res;
     //int i = 0;
-    while (read(pipe_cat[0], buf, 1) != 0){    
-        read(pipe_gen[0], b, 1);
+    while ((read(pipe_cat[0], buf, 1) != 0) && (read(pipe_gen[0], b, 1) != 0)){    
         res = b[0] ^ buf[0];
         printf("%c",res);
     }
